@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Exam Demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+  </head>
+  <body>
+    <h1>Exam Demo</h1>
+
+    <section id="login">
+      <h2>Login</h2>
+      <input id="u" placeholder="username" value="admin" />
+      <input id="p" placeholder="password" type="password" value="admin123" />
+      <button id="btnLogin">Login</button>
+      <pre id="loginMsg"></pre>
+    </section>
+
+    <section id="quiz" style="display: none">
+      <h2 id="quizTitle"></h2>
+      <button id="btnStart">Start Quiz</button>
+
+      <div id="exam" style="display: none; margin-top: 16px">
+        <div id="progress"></div>
+        <h3 id="qText"></h3>
+        <div id="options"></div>
+
+        <div style="margin-top: 12px">
+          <button id="btnPrev">Prev</button>
+          <button id="btnNext">Next</button>
+        </div>
+
+        <div style="margin-top: 12px">
+          <button id="btnSubmit">Submit Quiz</button>
+        </div>
+      </div>
+
+      <pre id="quizOut"></pre>
+    </section>
+
+    <script src="./app.js"></script>
+  </body>
+</html>

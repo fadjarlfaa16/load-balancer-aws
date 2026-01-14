@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Exam Browser - Login</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <main class="page">
+      <h1 class="title">Exam Browser</h1>
+
+      <section class="auth-card" aria-label="Authentication">
+        <!-- LOGIN ONLY -->
+        <form
+          class="panel panel--login"
+          id="loginForm"
+          style="display: block; padding: 6px"
+        >
+          <div class="field">
+            <input
+              type="text"
+              id="username"
+              placeholder="Username"
+              required
+              value="admin"
+            />
+          </div>
+          <div class="field">
+            <input
+              type="password"
+              id="password"
+              placeholder="Password"
+              required
+              value="admin123"
+            />
+          </div>
+
+          <button class="btn" type="submit" id="loginBtn">Login</button>
+        </form>
+      </section>
+    </main>
+
+    <!-- ================= JS ================= -->
+    <script>
+      const API = "/api";
+
+      // LOGIN → call backend API
+      document
+        .getElementById("loginForm")
+        .addEventListener("submit", async function (e) {
+          e.preventDefault();
+
+          const username = document.getElementById("username").value;
+          const password = document.getElementById("password").value;
+
+          console.log("Attempting login...", { username });
+
+          try {
+            const res = await fetch(`${API}/login`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ username: username, password: password }),
+            });
+
+            console.log("Response status:", res.status);
+
+            const data = await res.json();
+            console.log("Response data:", data);
+
+            if (!res.ok) {
+              alert(`Login failed: ${data.message || res.status}`);
+              return;
+            }
+
+            // Save token
+            localStorage.setItem("token", data.token);
+            localStorage.setItem("username", username);
+
+            console.log("Login successful, redirecting...");
+
+            // Redirect to quiz list
+            window.location.href = "quiz-list.html";
+          } catch (err) {
+            console.error("Login error:", err);
+            alert("Login error: " + err.message);
+          }
+        });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Available Quizzes</title>
+    <link rel="stylesheet" href="homepage.css" />
+  </head>
+  <body>
+    <main class="page">
+      <h1 class="title">Available Quizzes</h1>
+
+      <section class="grid" id="quizGrid" aria-label="Quiz list">
+        <!-- Quiz cards will be injected here -->
+      </section>
+    </main>
+
+    <script>
+      const API = "/api";
+
+      function getToken() {
+        return localStorage.getItem("token");
+      }
+
+      async function loadQuizzes() {
+        const token = getToken();
+        if (!token) {
+          alert("Please login first");
+          window.location.href = "index.html";
+          return;
+        }
+
+        try {
+          const res = await fetch(`${API}/quizzes`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+
+          if (!res.ok) {
+            if (res.status === 401) {
+              alert("Session expired. Please login again.");
+              localStorage.clear();
+              window.location.href = "index.html";
+              return;
+            }
+            throw new Error(`Failed to load quizzes: ${res.status}`);
+          }
+
+          const quizzes = await res.json();
+          renderQuizzes(quizzes);
+        } catch (err) {
+          alert("Error loading quizzes: " + err.message);
+          console.error(err);
+        }
+      }
+
+      function renderQuizzes(quizzes) {
+        const grid = document.getElementById("quizGrid");
+        grid.innerHTML = "";
+
+        if (quizzes.length === 0) {
+          grid.innerHTML =
+            '<p style="text-align:center; font-size:24px;">No quizzes available</p>';
+          return;
+        }
+
+        quizzes.forEach((quiz) => {
+          const card = document.createElement("a");
+          card.className = "class-card";
+          card.href = `exam.html?quizId=${quiz.quizId}`;
+
+          const name = document.createElement("span");
+          name.className = "class-name";
+          name.textContent = quiz.title;
+
+          card.appendChild(name);
+          grid.appendChild(card);
+        });
+      }
+
+      // Load quizzes on page load
+      loadQuizzes();
+    </script>
+  </body>
+</html>

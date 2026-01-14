@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>API Test</title>
+    <style>
+      body {
+        font-family: monospace;
+        padding: 20px;
+      }
+      button {
+        padding: 10px 20px;
+        margin: 10px;
+        font-size: 16px;
+      }
+      pre {
+        background: #f4f4f4;
+        padding: 15px;
+        border-radius: 5px;
+      }
+      .success {
+        color: green;
+      }
+      .error {
+        color: red;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>API Test Page</h1>
+
+    <div>
+      <h2>1. Test Health Endpoint</h2>
+      <button onclick="testHealth()">Test /api/health</button>
+      <pre id="health-result"></pre>
+    </div>
+
+    <div>
+      <h2>2. Test Login</h2>
+      <input type="text" id="user" value="admin" placeholder="username" />
+      <input
+        type="password"
+        id="pass"
+        value="admin123"
+        placeholder="password"
+      />
+      <button onclick="testLogin()">Test Login</button>
+      <pre id="login-result"></pre>
+    </div>
+
+    <div>
+      <h2>3. Test Seed (requires token)</h2>
+      <button onclick="testSeed()">Seed Quiz</button>
+      <pre id="seed-result"></pre>
+    </div>
+
+    <div>
+      <h2>4. Test List Quizzes (requires token)</h2>
+      <button onclick="testListQuizzes()">List Quizzes</button>
+      <pre id="quiz-result"></pre>
+    </div>
+
+    <script>
+      let token = localStorage.getItem("token") || "";
+
+      async function testHealth() {
+        const result = document.getElementById("health-result");
+        result.textContent = "Testing...";
+
+        try {
+          const res = await fetch("/api/health");
+          const data = await res.json();
+          result.className = "success";
+          result.textContent = `✓ Status: ${res.status}\n${JSON.stringify(
+            data,
+            null,
+            2
+          )}`;
+        } catch (err) {
+          result.className = "error";
+          result.textContent = `✗ Error: ${err.message}`;
+        }
+      }
+
+      async function testLogin() {
+        const result = document.getElementById("login-result");
+        result.textContent = "Testing...";
+
+        const username = document.getElementById("user").value;
+        const password = document.getElementById("pass").value;
+
+        try {
+          const res = await fetch("/api/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username, password }),
+          });
+
+          const data = await res.json();
+
+          if (res.ok) {
+            token = data.token;
+            localStorage.setItem("token", token);
+            result.className = "success";
+            result.textContent = `✓ Status: ${
+              res.status
+            }\nToken saved!\n${JSON.stringify(data, null, 2)}`;
+          } else {
+            result.className = "error";
+            result.textContent = `✗ Status: ${res.status}\n${JSON.stringify(
+              data,
+              null,
+              2
+            )}`;
+          }
+        } catch (err) {
+          result.className = "error";
+          result.textContent = `✗ Error: ${err.message}`;
+        }
+      }
+
+      async function testSeed() {
+        const result = document.getElementById("seed-result");
+        result.textContent = "Testing...";
+
+        if (!token) {
+          result.className = "error";
+          result.textContent = "✗ No token. Please login first.";
+          return;
+        }
+
+        try {
+          const res = await fetch("/api/seed", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${token}` },
+          });
+
+          const data = await res.json();
+          result.className = res.ok ? "success" : "error";
+          result.textContent = `${res.ok ? "✓" : "✗"} Status: ${
+            res.status
+          }\n${JSON.stringify(data, null, 2)}`;
+        } catch (err) {
+          result.className = "error";
+          result.textContent = `✗ Error: ${err.message}`;
+        }
+      }
+
+      async function testListQuizzes() {
+        const result = document.getElementById("quiz-result");
+        result.textContent = "Testing...";
+
+        if (!token) {
+          result.className = "error";
+          result.textContent = "✗ No token. Please login first.";
+          return;
+        }
+
+        try {
+          const res = await fetch("/api/quizzes", {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+
+          const data = await res.json();
+          result.className = res.ok ? "success" : "error";
+          result.textContent = `${res.ok ? "✓" : "✗"} Status: ${
+            res.status
+          }\n${JSON.stringify(data, null, 2)}`;
+        } catch (err) {
+          result.className = "error";
+          result.textContent = `✗ Error: ${err.message}`;
+        }
+      }
+    </script>
+  </body>
+</html>

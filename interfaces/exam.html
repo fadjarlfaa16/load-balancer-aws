@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Exam</title>
+    <link rel="stylesheet" href="questions.css" />
+  </head>
+  <body>
+    <main class="page">
+      <section class="board" aria-label="Question Board">
+        <header class="q-head">
+          <h1 class="q-title" id="qTitle">Loading...</h1>
+          <p class="q-desc" id="qDesc">Please wait...</p>
+        </header>
+
+        <!-- ====== CONTENT AREA ====== -->
+        <section id="qBody" class="q-body" aria-label="Question Body">
+          <!-- Questions will be rendered here -->
+        </section>
+
+        <!-- ====== ACTIONS ====== -->
+        <footer class="actions" id="actions">
+          <!-- Buttons will be rendered here -->
+        </footer>
+      </section>
+    </main>
+
+    <script>
+      const API = "/api";
+      const urlParams = new URLSearchParams(window.location.search);
+      const quizId = urlParams.get("quizId");
+
+      let state = {
+        attemptId: null,
+        bundle: null,
+        idx: 0,
+        answers: {},
+      };
+
+      function getToken() {
+        return localStorage.getItem("token");
+      }
+
+      function setCurrentAttempt(attemptId, quizId, idx = 0) {
+        localStorage.setItem("currentAttemptId", attemptId);
+        localStorage.setItem("currentQuizId", quizId);
+        localStorage.setItem("currentIdx", String(idx));
+      }
+
+      function clearCurrentAttempt() {
+        localStorage.removeItem("currentAttemptId");
+        localStorage.removeItem("currentQuizId");
+        localStorage.removeItem("currentIdx");
+      }
+
+      async function initQuiz() {
+        const token = getToken();
+        if (!token || !quizId) {
+          alert("Invalid session or quiz");
+          window.location.href = "index.html";
+          return;
+        }
+
+        // Check if there's ongoing attempt
+        const savedAttemptId = localStorage.getItem("currentAttemptId");
+        const savedQuizId = localStorage.getItem("currentQuizId");
+
+        if (savedAttemptId && savedQuizId === quizId) {
+          await resumeAttempt(savedAttemptId);
+          return;
+        }
+
+        // Start new attempt
+        try {
+          const res = await fetch(`${API}/attempts/init`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ quizId }),
+          });
+
+          const data = await res.json();
+          if (!res.ok) {
+            alert(`Failed to start quiz: ${data.message || res.status}`);
+            return;
+          }
+
+          state.attemptId = data.attemptId;
+          state.bundle = data.bundle;
+          state.idx = 0;
+          state.answers = {};
+
+          setCurrentAttempt(state.attemptId, quizId, 0);
+          renderQuestion();
+        } catch (err) {
+          alert("Error starting quiz: " + err.message);
+          console.error(err);
+        }
+      }
+
+      async function resumeAttempt(attemptId) {
+        const token = getToken();
+        try {
+          const res = await fetch(`${API}/attempts/${attemptId}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+
+          const attempt = await res.json();
+          if (!res.ok) {
+            clearCurrentAttempt();
+            await initQuiz();
+            return;
+          }
+
+          if (attempt.status === "SUBMITTED") {
+            clearCurrentAttempt();
+            alert("This quiz has already been submitted.");
+            window.location.href = "quiz-list.html";
+            return;
+          }
+
+          // Load quiz bundle
+          const quizRes = await fetch(`${API}/quizzes/${quizId}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          const bundle = await quizRes.json();
+
+          state.attemptId = attemptId;
+          state.bundle = bundle;
+          state.idx = parseInt(localStorage.getItem("currentIdx") || "0");
+          state.answers = attempt.answers || {};
+
+          renderQuestion();
+        } catch (err) {
+          alert("Error resuming quiz: " + err.message);
+          console.error(err);
+        }
+      }
+
+      function renderQuestion() {
+        if (!state.bundle || !state.bundle.questions) return;
+
+        const q = state.bundle.questions[state.idx];
+
+        document.getElementById("qTitle").textContent = `Question ${
+          state.idx + 1
+        } of ${state.bundle.questions.length}`;
+        document.getElementById("qDesc").textContent = q.text;
+
+        const qBody = document.getElementById("qBody");
+        const actions = document.getElementById("actions");
+
+        qBody.innerHTML = "";
+        actions.innerHTML = "";
+        actions.className = "actions";
+
+        renderMCQ(q, qBody, actions);
+      }
+
+      function renderMCQ(q, qBody, actions) {
+        const wrapper = document.createElement("div");
+        wrapper.className = "mcq";
+
+        q.options.forEach((opt, i) => {
+          const label = document.createElement("label");
+          label.className = "option";
+
+          const input = document.createElement("input");
+          input.type = "radio";
+          input.name = "mcq";
+          input.value = i;
+
+          // Check if this option was selected
+          if (state.answers[q.id] === i) {
+            input.checked = true;
+          }
+
+          input.addEventListener("change", async () => {
+            state.answers[q.id] = i;
+            await saveAnswer(q.id, i);
+          });
+
+          const pill = document.createElement("span");
+          pill.className = "option-pill";
+          pill.textContent = opt;
+
+          label.appendChild(input);
+          label.appendChild(pill);
+          wrapper.appendChild(label);
+        });
+
+        qBody.appendChild(wrapper);
+
+        // Navigation buttons
+        actions.className = "actions split";
+
+        const prevBtn = document.createElement("button");
+        prevBtn.className = "btn";
+        prevBtn.innerHTML =
+          '<span class="icon left"></span><span>Previous</span>';
+        prevBtn.disabled = state.idx === 0;
+        prevBtn.onclick = () => {
+          if (state.idx > 0) {
+            state.idx--;
+            localStorage.setItem("currentIdx", String(state.idx));
+            renderQuestion();
+          }
+        };
+
+        const nextOrSubmit = document.createElement("button");
+        nextOrSubmit.className = "btn";
+
+        if (state.idx === state.bundle.questions.length - 1) {
+          nextOrSubmit.innerHTML =
+            '<span>Submit Quiz</span><span class="icon right"></span>';
+          nextOrSubmit.onclick = submitQuiz;
+        } else {
+          nextOrSubmit.innerHTML =
+            '<span>Next</span><span class="icon right"></span>';
+          nextOrSubmit.onclick = () => {
+            state.idx++;
+            localStorage.setItem("currentIdx", String(state.idx));
+            renderQuestion();
+          };
+        }
+
+        actions.appendChild(prevBtn);
+        actions.appendChild(nextOrSubmit);
+      }
+
+      async function saveAnswer(questionId, choice) {
+        const token = getToken();
+        try {
+          await fetch(`${API}/attempts/${state.attemptId}/answers`, {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ questionId, choice }),
+          });
+        } catch (err) {
+          console.error("Failed to save answer:", err);
+        }
+      }
+
+      async function submitQuiz() {
+        if (!confirm("Are you sure you want to submit this quiz?")) return;
+
+        const token = getToken();
+        try {
+          const res = await fetch(`${API}/attempts/${state.attemptId}/submit`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${token}` },
+          });
+
+          if (!res.ok) {
+            alert("Failed to submit quiz");
+            return;
+          }
+
+          clearCurrentAttempt();
+          window.location.href = "submitted.html";
+        } catch (err) {
+          alert("Error submitting quiz: " + err.message);
+          console.error(err);
+        }
+      }
+
+      // Start quiz on load
+      initQuiz();
+    </script>
+  </body>
+</html>

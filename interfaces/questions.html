@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Questions</title>
+  <link rel="stylesheet" href="questions.css" />
+</head>
+<body>
+  <main class="page">
+    <section class="board" aria-label="Question Board">
+      <header class="q-head">
+        <h1 class="q-title" id="qTitle">Question 1 of 3</h1>
+        <p class="q-desc" id="qDesc">
+          Lorem ipsum dolor sit amet, consectetur adipiscing elit. Duis eros elit, luctus vitae sem quis, sollicitudin pharetra ligula.
+        </p>
+      </header>
+
+      <!-- ====== CONTENT AREA (rendered by JS) ====== -->
+      <section id="qBody" class="q-body" aria-label="Question Body">
+        <!-- JS injects MCQ / Essay / TrueFalse here -->
+      </section>
+
+      <!-- ====== ACTIONS (rendered by JS) ====== -->
+      <footer class="actions" id="actions">
+        <!-- JS injects buttons here -->
+      </footer>
+    </section>
+  </main>
+
+  <script src="questions.js"></script>
+</body>
+</html>
